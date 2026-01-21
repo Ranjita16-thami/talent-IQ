@@ -1,8 +1,12 @@
 import { Inngest } from "inngest";
 import { connectDB } from "./db.js";
 import User from "../models/User.js";
+import { ENV } from "./env.js";
 
-export const inngest = new Inngest({ id: "talent-iq" });
+export const inngest = new Inngest({ 
+  id: "talent-iq",
+  signingKey: ENV.INNGEST_SIGNING_KEY 
+});
 
 const syncUser = inngest.createFunction(
   { id: "sync-user" },
