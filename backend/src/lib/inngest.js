@@ -11,7 +11,8 @@ export const inngest = new Inngest({
 
 const syncUser = inngest.createFunction(
   { id: "sync-user" },
-  { event: "user.created" },  // Corrected: Clerk sends "user.created" not "clerk/user.created"
+  // Clerk emits "clerk/user.created" via webhooks; use exact match so runs trigger
+  { event: "clerk/user.created" },
   async ({ event }) => {
     try {
       await connectDB();
@@ -46,7 +47,8 @@ const syncUser = inngest.createFunction(
 
 const deleteUserFromDB = inngest.createFunction(
   { id: "delete-user-from-db" },
-  { event: "user.deleted" },  // Corrected: Clerk sends "user.deleted" not "clerk/user.deleted"
+  // Clerk emits "clerk/user.deleted"; mismatch here prevents run logs from appearing
+  { event: "clerk/user.deleted" },
   async ({ event }) => {
     try {
       await connectDB();
