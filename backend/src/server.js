@@ -17,6 +17,35 @@ app.use(cors({origin:ENV.CLIENT_URL,credentials:true}))
 
 app.use("/api/inngest",serve({client:inngest, functions }))
 
+// Clerk webhook endpoint
+app.post("/api/webhooks/clerk", async (req, res) => {
+  try {
+    const webhookPayload = req.body;
+    
+    console.log("Received Clerk webhook:", webhookPayload.name);
+
+    // Extract event name and data from Clerk webhook payload
+    const eventName = webhookPayload.name; // e.g., "clerk/user.created"
+    const userData = webhookPayload.data; // User data object
+
+    if (!eventName || !userData) {
+      return res.status(400).json({ error: "Invalid webhook payload" });
+    }
+
+    // Send event to Inngest with user data
+    // Inngest will wrap this, so event.data will contain the userData
+    await inngest.send({
+      name: eventName,
+      data: userData
+    });
+
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error("Error processing Clerk webhook:", error);
+    res.status(500).json({ error: "Failed to process webhook" });
+  }
+});
+
 app.get("/health",(req,res)=>{
     res.status(200).json({msg:"sutyo ki nai"})
 })

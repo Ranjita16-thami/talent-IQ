@@ -19,19 +19,26 @@ const syncUser = inngest.createFunction(
 
       console.log("Sync user function triggered:", event.data); // Added logging
 
+      // event.data contains the user data object directly
+      const userData = event.data;
+
       const {
         id,
         email_addresses,
         first_name,
         last_name,
         image_url,
-      } = event.data;
+      } = userData;
+
+      if (!id) {
+        throw new Error("User ID is missing from webhook payload");
+      }
 
       const newUser = {
         clerkId: id,
-        email: email_addresses[0]?.email_address,
-        name: `${first_name || ""} ${last_name || ""}`.trim(), // Added trim()
-        profileImage: image_url,
+        email: email_addresses?.[0]?.email_address,
+        name: `${first_name || ""} ${last_name || ""}`.trim(),
+        profileImage: image_url || "",
       };
 
       await User.create(newUser);
@@ -53,11 +60,19 @@ const deleteUserFromDB = inngest.createFunction(
     try {
       await connectDB();
 
-      console.log("Delete user function triggered:", event.data.id); // Added logging
+      // event.data contains the user data object directly
+      const userData = event.data;
+      const userId = userData?.id;
 
-      await User.deleteOne({ clerkId: event.data.id });
+      console.log("Delete user function triggered:", userId); // Added logging
 
-      console.log("User deleted successfully:", event.data.id); // Added logging
+      if (!userId) {
+        throw new Error("User ID is missing from webhook payload");
+      }
+
+      await User.deleteOne({ clerkId: userId });
+
+      console.log("User deleted successfully:", userId); // Added logging
 
       return { success: true };
     } catch (error) {
