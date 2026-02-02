@@ -36,12 +36,18 @@ const syncUser = inngest.createFunction(
         throw new Error("User ID is required");
       }
 
+      // Build user object
       const newUser = {
         clerkId: id,
-        email: email_addresses?.[0]?.email_address || "",
         name: `${first_name || ""} ${last_name || ""}`.trim() || "User",
         profileImage: image_url || profile_image_url || "",
       };
+
+      // Only add email if it exists and is not empty
+      const email = email_addresses?.[0]?.email_address;
+      if (email && email.trim() !== "") {
+        newUser.email = email;
+      }
 
       console.log("Creating user with data:", newUser);
 
@@ -49,12 +55,18 @@ const syncUser = inngest.createFunction(
       console.log("User created successfully in DB:", newUser.clerkId);
 
       // Sync to Stream Chat
-      await upsertStreamUser({
+      const streamUserData = {
         id: newUser.clerkId.toString(),
         name: newUser.name,
-        email: newUser.email,
         image: newUser.profileImage,
-      });
+      };
+
+      // Only add email to Stream if it exists
+      if (newUser.email) {
+        streamUserData.email = newUser.email;
+      }
+
+      await upsertStreamUser(streamUserData);
 
       console.log("User synced to Stream Chat successfully:", newUser.clerkId);
       
