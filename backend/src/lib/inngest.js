@@ -2,6 +2,7 @@ import { Inngest } from "inngest";
 import { connectDB } from "./db.js";
 import User from "../models/User.js";
 import { ENV } from "./env.js";
+import { deleteStreamUser, upsertStreamUser } from "./stream.js";
 
 export const inngest = new Inngest({ 
   id: "talent-iq",
@@ -11,74 +12,53 @@ export const inngest = new Inngest({
 
 const syncUser = inngest.createFunction(
   { id: "sync-user" },
-  // Clerk emits "clerk/user.created" via webhooks; use exact match so runs trigger
   { event: "clerk/user.created" },
   async ({ event }) => {
-    try {
-      await connectDB();
+    await connectDB();
 
-      console.log("Sync user function triggered:", event.data); // Added logging
+    console.log("Sync user function triggered:", JSON.stringify(event.data, null, 2));
 
-      // event.data contains the user data object directly
-      const userData = event.data;
+    const {
+      id,
+      email_addresses,
+      first_name,
+      last_name,
+      image_url,
+      profile_image_url
+    } = event.data;
 
-      const {
-        id,
-        email_addresses,
-        first_name,
-        last_name,
-        image_url,
-      } = userData;
+    const newUser = {
+      clerkId: id,
+      email: email_addresses[0]?.email_address,
+      name: `${first_name || ""} ${last_name || ""}`.trim(),
+      profileImage: image_url || profile_image_url,
+    };
 
-      if (!id) {
-        throw new Error("User ID is missing from webhook payload");
-      }
+    console.log("Creating user with data:", newUser);
 
-      const newUser = {
-        clerkId: id,
-        email: email_addresses?.[0]?.email_address,
-        name: `${first_name || ""} ${last_name || ""}`.trim(),
-        profileImage: image_url || "",
-      };
+    await User.create(newUser);
+    console.log("User created successfully:", newUser.clerkId);
 
-      await User.create(newUser);
-      console.log("User created successfully:", newUser.clerkId); // Added logging
-      
-      return { success: true };
-    } catch (error) {
-      console.error("Error creating user:", error);
-      throw error; // Re-throw to mark function as failed
-    }
+    await upsertStreamUser({
+      id: newUser.clerkId.toString(),
+      name: newUser.name,
+      image: newUser.profileImage,
+    });
   }
 );
 
 const deleteUserFromDB = inngest.createFunction(
   { id: "delete-user-from-db" },
-  // Clerk emits "clerk/user.deleted"; mismatch here prevents run logs from appearing
   { event: "clerk/user.deleted" },
   async ({ event }) => {
-    try {
-      await connectDB();
+    await connectDB();
 
-      // event.data contains the user data object directly
-      const userData = event.data;
-      const userId = userData?.id;
+    console.log("Delete user function triggered:", JSON.stringify(event.data, null, 2));
 
-      console.log("Delete user function triggered:", userId); // Added logging
+    const { id } = event.data;
+    await User.deleteOne({ clerkId: id });
 
-      if (!userId) {
-        throw new Error("User ID is missing from webhook payload");
-      }
-
-      await User.deleteOne({ clerkId: userId });
-
-      console.log("User deleted successfully:", userId); // Added logging
-
-      return { success: true };
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      throw error; // Re-throw to mark function as failed
-    }
+    await deleteStreamUser(id.toString());
   }
 );
 
