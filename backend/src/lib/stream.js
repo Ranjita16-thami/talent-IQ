@@ -1,30 +1,21 @@
+
 import { StreamChat } from "stream-chat";
-import { StreamClient } from "@stream-io/node-sdk";
 import { ENV } from "./env.js";
 
 const apiKey = ENV.STREAM_API_KEY;
 const apiSecret = ENV.STREAM_API_SECRET;
 
 if (!apiKey || !apiSecret) {
-  console.error("STREAM_API_KEY or STREAM_API_SECRET is missing");
+  console.error("Stream API KEY or SECRET is missing");
+  throw new Error("Stream API credentials not configured");
 }
 
-export const chatClient = StreamChat.getInstance(apiKey, apiSecret); // will be used chat features
-export const streamClient = new StreamClient(apiKey, apiSecret); // will be used for video calls
+export const chatClient = StreamChat.getInstance(apiKey, apiSecret);//will bw used chat features
 
 export const upsertStreamUser = async (userData) => {
   try {
-    // Enhance userData with additional fields to match tutorial format
-    const enhancedUserData = {
-      ...userData,
-      role: userData.role || "user",
-      language: userData.language || "**",
-      teams: userData.teams || [],
-      invisible: userData.invisible !== undefined ? userData.invisible : false,
-    };
-
-    await chatClient.upsertUser(enhancedUserData);
-    console.log("Stream user upserted successfully:", enhancedUserData);
+    await chatClient.upsertUser(userData);
+    console.log("Stream user upserted successfully:", userData);
   } catch (error) {
     console.error("Error upserting Stream user:", error);
   }
@@ -32,10 +23,7 @@ export const upsertStreamUser = async (userData) => {
 
 export const deleteStreamUser = async (userId) => {
   try {
-    await chatClient.deleteUser(userId, {
-      mark_messages_deleted: true,
-      hard_delete: true,
-    });
+    await chatClient.deleteUser(userId);
     console.log("Stream user deleted successfully:", userId);
   } catch (error) {
     console.error("Error deleting the Stream user:", error);
