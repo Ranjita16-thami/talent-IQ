@@ -1,76 +1,43 @@
-
 import { StreamChat } from "stream-chat";
+import { StreamClient } from "@stream-io/node-sdk";
 import { ENV } from "./env.js";
 
 const apiKey = ENV.STREAM_API_KEY;
 const apiSecret = ENV.STREAM_API_SECRET;
 
 if (!apiKey || !apiSecret) {
-  console.error("Stream API KEY or SECRET is missing");
-  throw new Error("Stream API credentials not configured");
+  console.error("STREAM_API_KEY or STREAM_API_SECRET is missing");
 }
 
-export const chatClient = StreamChat.getInstance(apiKey, apiSecret);
+export const chatClient = StreamChat.getInstance(apiKey, apiSecret); // will be used chat features
+export const streamClient = new StreamClient(apiKey, apiSecret); // will be used for video calls
 
 export const upsertStreamUser = async (userData) => {
   try {
-    // Validate required fields
-    if (!userData.id) {
-      throw new Error("User ID is required");
-    }
-
-    // Prepare user data for Stream
-    const streamUser = {
-      id: userData.id,
-      name: userData.name || "User",
-      ...(userData.email && { email: userData.email }),
-      ...(userData.image && { image: userData.image }),
+    // Enhance userData with additional fields to match tutorial format
+    const enhancedUserData = {
+      ...userData,
+      role: userData.role || "user",
+      language: userData.language || "**",
+      teams: userData.teams || [],
+      invisible: userData.invisible !== undefined ? userData.invisible : false,
     };
 
-    console.log("Upserting Stream user:", streamUser);
-
-    await chatClient.upsertUser(streamUser);
-
-    console.log("Stream user upserted successfully:", streamUser.id);
+    await chatClient.upsertUser(enhancedUserData);
+    console.log("Stream user upserted successfully:", enhancedUserData);
   } catch (error) {
     console.error("Error upserting Stream user:", error);
-    throw error;
   }
 };
 
 export const deleteStreamUser = async (userId) => {
   try {
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
-
-    console.log("Deleting Stream user:", userId);
-
     await chatClient.deleteUser(userId, {
       mark_messages_deleted: true,
       hard_delete: true,
     });
-
     console.log("Stream user deleted successfully:", userId);
   } catch (error) {
-    console.error("Error deleting Stream user:", error);
-    throw error;
-  }
-};
-
-// Generate user token for client-side authentication
-export const generateUserToken = (userId) => {
-  try {
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
-
-    const token = chatClient.createToken(userId);
-    console.log("Generated token for user:", userId);
-
-    return token;
-  } catch (error) {
-    console.error("Error generating user token:", error);
-    throw error;
+    console.error("Error deleting the Stream user:", error);
   }
 };
