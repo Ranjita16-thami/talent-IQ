@@ -1,6 +1,7 @@
 
 import { StreamChat } from "stream-chat";
 import { ENV } from "./env.js";
+import { err } from "inngest/types";
 
 const apiKey = ENV.STREAM_API_KEY;
 const apiSecret = ENV.STREAM_API_SECRET;
@@ -14,10 +15,17 @@ export const chatClient = StreamChat.getInstance(apiKey, apiSecret);//will bw us
 
 export const upsertStreamUser = async (userData) => {
   try {
-    await chatClient.upsertUser(userData);
+    const streamUser = {
+      id: String(userData.id), // Ensure it's a string
+      name: userData.name || 'User',
+      image: userData.image,
+    }
+    const response = await chatClient.upsertUser(streamUser);
     console.log("Stream user upserted successfully:", userData);
+    return response
   } catch (error) {
     console.error("Error upserting Stream user:", error);
+    throw error
   }
 };
 
