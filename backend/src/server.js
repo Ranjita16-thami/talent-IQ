@@ -6,6 +6,12 @@ import {ENV} from "./lib/env.js"
 import { connectDB } from "./lib/db.js"
 import { inngest, functions } from "./lib/inngest.js"
 
+// Add this import at the top
+import { chatClient, upsertStreamUser } from "./lib/stream.js";
+
+
+
+
 const app = express()
 const _dirname = path.resolve()
 
@@ -16,6 +22,41 @@ app.use(express.json())
 app.use(cors({origin:ENV.CLIENT_URL,credentials:true}))
 
 app.use("/api/inngest",serve({client:inngest, functions }))
+
+// Add this endpoint
+app.get("/test-stream-direct", async (req, res) => {
+  try {
+    console.log("=== TESTING GETSTREAM DIRECTLY ===");
+    
+    // Test with the actual Clerk user ID format
+    const testUser = {
+      id: "user_test_" + Date.now(),
+      name: "Ranjita Thami Test",
+      image: "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvb2F1dGhfZ29vZ2xlL2ltZ18zOVFHakVuZEJwOGp1ejJyaDBGcFo4SVBacXMifQ"
+    };
+    
+    console.log("Creating test user:", testUser);
+    
+    const result = await chatClient.upsertUser(testUser);
+    
+    console.log("✅ Success! Result:", result);
+    
+    res.json({ 
+      success: true, 
+      message: "User created! Check GetStream Explorer NOW!",
+      testUser,
+      result 
+    });
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.toString(),
+      stack: error.stack
+    });
+  }
+});
+
 
 // Clerk webhook endpoint
 app.post("/api/webhooks/clerk", async (req, res) => {

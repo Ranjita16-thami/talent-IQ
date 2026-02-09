@@ -1,7 +1,5 @@
-
 import { StreamChat } from "stream-chat";
 import { ENV } from "./env.js";
-import { err } from "inngest/types";
 
 const apiKey = ENV.STREAM_API_KEY;
 const apiSecret = ENV.STREAM_API_SECRET;
@@ -11,29 +9,46 @@ if (!apiKey || !apiSecret) {
   throw new Error("Stream API credentials not configured");
 }
 
-export const chatClient = StreamChat.getInstance(apiKey, apiSecret);//will bw used chat features
+// Initialize the client
+export const chatClient = StreamChat.getInstance(apiKey, apiSecret);
 
 export const upsertStreamUser = async (userData) => {
   try {
+    console.log("=== UPSERTING STREAM USER ===");
+    console.log("Input data:", JSON.stringify(userData, null, 2));
+    
+    // Ensure all required fields are present
     const streamUser = {
-      id: String(userData.id), // Ensure it's a string
+      id: userData.id,
       name: userData.name || 'User',
-      image: userData.image,
-    }
+      // Only include image if it exists and is a valid URL
+      ...(userData.image && { image: userData.image }),
+    };
+
+    console.log("Formatted user for GetStream:", JSON.stringify(streamUser, null, 2));
+    
+    // The upsertUser call
     const response = await chatClient.upsertUser(streamUser);
-    console.log("Stream user upserted successfully:", userData);
-    return response
+    
+    console.log("✅ Stream user upserted successfully!");
+    console.log("Response:", JSON.stringify(response, null, 2));
+    
+    return response;
   } catch (error) {
-    console.error("Error upserting Stream user:", error);
-    throw error
+    console.error("❌ Error upserting Stream user");
+    console.error("Error message:", error.message);
+    console.error("Error response:", error.response?.data || error);
+    throw error;
   }
 };
 
 export const deleteStreamUser = async (userId) => {
   try {
-    await chatClient.deleteUser(userId);
-    console.log("Stream user deleted successfully:", userId);
+    console.log("Deleting Stream user:", userId);
+    await chatClient.deleteUser(userId, { mark_messages_deleted: true });
+    console.log("✅ Stream user deleted successfully:", userId);
   } catch (error) {
-    console.error("Error deleting the Stream user:", error);
+    console.error("❌ Error deleting Stream user:", error);
+    throw error;
   }
 };
